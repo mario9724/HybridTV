@@ -22,9 +22,9 @@ const http = axios.create({
 });
 
 const cache = {
-  epg: { ts: 0, data: null },
-  playlist: { ts: 0, data: null },
-  channels: { ts: 0, data: null }
+  epg: { ts: 0,  null },
+  playlist: { ts: 0,  null },
+  channels: { ts: 0,  null }
 };
 
 const TTL_MS = 1000 * 60 * 15;
@@ -32,7 +32,7 @@ const TTL_MS = 1000 * 60 * 15;
 function normalizeName(name = '') {
   return name
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\\([^)]*\\)/g, ' ')
     .replace(/\b(HD|FHD|UHD|SD|4K|HEVC|H265|H264|BACKUP|LAT|CAST|ESPANOL|ESPAÑOL)\b/gi, ' ')
     .replace(/\bTVE\b/gi, 'LA 1')
     .replace(/\bM\.?\+\b/gi, 'MOVISTAR PLUS')
@@ -61,19 +61,107 @@ function scoreMatch(a, b) {
   if (!na || !nb) return 0;
   if (na === nb) return 100;
   if (na.includes(nb) || nb.includes(na)) return 90;
+
   const ta = tokenize(a);
   const tb = tokenize(b);
   const inter = [...ta].filter(x => tb.has(x)).length;
   const union = new Set([...ta, ...tb]).size || 1;
   let score = Math.round((inter / union) * 70);
+
   const boosts = [
-    ['LALIGA', 12], ['MOVISTAR', 8], ['DAZN', 10], ['TELECINCO', 10], ['ANTENA', 10],
-    ['CUATRO', 10], ['LASEXTA', 10], ['HOLLYWOOD', 8], ['AMC', 8], ['EUROSPORT', 8], ['AXN', 8], ['F1', 10]
+    ['LALIGA', 12],
+    ['MOVISTAR', 8],
+    ['DAZN', 10],
+    ['TELECINCO', 10],
+    ['ANTENA', 10],
+    ['CUATRO', 10],
+    ['LASEXTA', 10],
+    ['HOLLYWOOD', 8],
+    ['AMC', 8],
+    ['EUROSPORT', 8],
+    ['AXN', 8],
+    ['F1', 10]
   ];
+
   for (const [term, bonus] of boosts) {
     if (na.includes(term) && nb.includes(term)) score += bonus;
   }
+
   return Math.min(score, 99);
+}
+
+const OVERRIDES = {
+  'TVE LA 1 MADRID': { epgQuery: 'LA 1' },
+  'LA 1': { epgQuery: 'LA 1' },
+  'LA 1 HD': { epgQuery: 'LA 1' },
+
+  'TELECINCO': { epgQuery: 'TELECINCO' },
+  'TELECINCO HD': { epgQuery: 'TELECINCO' },
+
+  'ANTENA 3': { epgQuery: 'ANTENA 3' },
+  'ANTENA 3 HD': { epgQuery: 'ANTENA 3' },
+
+  'CUATRO': { epgQuery: 'CUATRO' },
+  'CUATRO HD': { epgQuery: 'CUATRO' },
+
+  'LASEXTA': { epgQuery: 'LA SEXTA' },
+  'LA SEXTA': { epgQuery: 'LA SEXTA' },
+  'LA SEXTA HD': { epgQuery: 'LA SEXTA' },
+
+  'CANAL 24 HORAS': { epgQuery: 'CANAL 24 HORAS' },
+
+  'TELEDEPORTE': { epgQuery: 'TELEDEPORTE' },
+  'MEGA': { epgQuery: 'MEGA' },
+  'NOVA': { epgQuery: 'NOVA' },
+  'DMAX': { epgQuery: 'DMAX' },
+  'ENERGY': { epgQuery: 'ENERGY' },
+  'FACTORIA DE FICCION': { epgQuery: 'FACTORIA DE FICCION' },
+
+  'MOVISTAR F1': { epgQuery: 'DAZN F1' },
+  'DAZN F1': { epgQuery: 'DAZN F1' },
+  'DAZN 1': { epgQuery: 'DAZN 1' },
+  'DAZN 2': { epgQuery: 'DAZN 2' },
+
+  'MOVISTAR LALIGA': { epgQuery: 'MOVISTAR LALIGA' },
+  'MOVISTAR LA LIGA': { epgQuery: 'MOVISTAR LALIGA' },
+  'MOVISTAR LA LIGA BACKUP': { epgQuery: 'MOVISTAR LALIGA' },
+  'M LIGA DE CAMPEONES': { epgQuery: 'MOVISTAR LIGA DE CAMPEONES' },
+  'MOVISTAR LIGA DE CAMPEONES': { epgQuery: 'MOVISTAR LIGA DE CAMPEONES' },
+
+  'MOVISTAR DEPORTES': { epgQuery: 'MOVISTAR DEPORTES' },
+  'MOVISTAR ESTRENOS': { epgQuery: 'MOVISTAR ESTRENOS' },
+  'MOVISTAR SERIES': { epgQuery: 'MOVISTAR SERIES' },
+  'MOVISTAR COMEDIA': { epgQuery: 'MOVISTAR COMEDIA' },
+  'MOVISTAR DRAMA': { epgQuery: 'MOVISTAR DRAMA' },
+  'MOVISTAR ACCION': { epgQuery: 'MOVISTAR ACCION' },
+
+  'CANAL COCINA': { epgQuery: 'CANAL COCINA' },
+  'CANAL DECASA': { epgQuery: 'DECASA' },
+  'DECASA': { epgQuery: 'DECASA' },
+  'HISTORIA': { epgQuery: 'HISTORIA' },
+  'AMC': { epgQuery: 'AMC' },
+  'AMC BREAK': { epgQuery: 'AMC BREAK' },
+  'AXN': { epgQuery: 'AXN' },
+  'AXN HD': { epgQuery: 'AXN' },
+  'AXN MOVIES': { epgQuery: 'AXN MOVIES' },
+  'CALLE 13': { epgQuery: 'CALLE 13' },
+  'WARNER TV': { epgQuery: 'WARNER TV' },
+  'SYFY': { epgQuery: 'SYFY' },
+  'SYFY HD': { epgQuery: 'SYFY' },
+  'HOLLYWOOD': { epgQuery: 'HOLLYWOOD' },
+  'CANAL HOLLYWOOD': { epgQuery: 'HOLLYWOOD' },
+  'TCM': { epgQuery: 'TCM' },
+
+  'EUROSPORT 1': { epgQuery: 'EUROSPORT 1' },
+  'EUROSPORT 1 HD': { epgQuery: 'EUROSPORT 1' },
+  'REAL MADRID TV': { epgQuery: 'REAL MADRID TV' },
+  'GOL': { epgQuery: 'GOL' },
+  'GOL TV': { epgQuery: 'GOL' }
+};
+
+function findEpgByExactName(epgChannels, query) {
+  const nq = normalizeName(query);
+  return epgChannels.find(ch => normalizeName(ch.name) === nq) || null;
 }
 
 async function fetchCatalog() {
@@ -91,40 +179,63 @@ async function fetchStream(id) {
 async function mapLimit(items, limit, fn) {
   const results = [];
   let i = 0;
+
   async function worker() {
     while (i < items.length) {
       const idx = i++;
       results[idx] = await fn(items[idx], idx);
     }
   }
+
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return results;
 }
 
 async function fetchEpgData() {
   if (cache.epg.data && Date.now() - cache.epg.ts < TTL_MS) return cache.epg.data;
-  const { data: xml } = await http.get(EPG_URL, { responseType: 'text' });
+
+  const {  xml } = await http.get(EPG_URL, { responseType: 'text' });
   const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
   const parsed = parser.parse(xml);
-  const channelsRaw = parsed?.tv?.channel ? (Array.isArray(parsed.tv.channel) ? parsed.tv.channel : [parsed.tv.channel]) : [];
+
+  const channelsRaw = parsed?.tv?.channel
+    ? (Array.isArray(parsed.tv.channel) ? parsed.tv.channel : [parsed.tv.channel])
+    : [];
+
   const channels = channelsRaw.map(ch => {
     const displayNameNode = Array.isArray(ch['display-name']) ? ch['display-name'][0] : ch['display-name'];
     const iconNode = ch.icon;
     const iconSrc = Array.isArray(iconNode) ? iconNode[0]?.['@_src'] : iconNode?.['@_src'];
     const name = typeof displayNameNode === 'string' ? displayNameNode : displayNameNode?.['#text'] || '';
+
     return {
       id: ch['@_id'] || '',
       name,
       logo: iconSrc || ''
     };
   }).filter(x => x.id && x.name);
-  cache.epg = { ts: Date.now(), data: channels };
+
+  cache.epg = { ts: Date.now(),  channels };
   return channels;
 }
 
 function chooseEpg(channelName, epgChannels) {
+  const normalized = normalizeName(channelName);
+  const override = OVERRIDES[normalized];
+
+  if (override?.tvgId) {
+    const byId = epgChannels.find(ch => ch.id === override.tvgId);
+    if (byId) return { ...byId, score: 100, override: true };
+  }
+
+  if (override?.epgQuery) {
+    const direct = findEpgByExactName(epgChannels, override.epgQuery);
+    if (direct) return { ...direct, score: 100, override: true };
+  }
+
   let best = null;
   let bestScore = 0;
+
   for (const epg of epgChannels) {
     const score = scoreMatch(channelName, epg.name);
     if (score > bestScore) {
@@ -132,19 +243,24 @@ function chooseEpg(channelName, epgChannels) {
       bestScore = score;
     }
   }
-  if (bestScore >= 55) return { ...best, score: bestScore };
+
+  if (bestScore >= 55) return { ...best, score: bestScore, override: false };
   return null;
 }
 
 async function buildChannels() {
   if (cache.channels.data && Date.now() - cache.channels.ts < TTL_MS) return cache.channels.data;
+
   const [catalog, epgChannels] = await Promise.all([fetchCatalog(), fetchEpgData()]);
+
   const channels = await mapLimit(catalog, CONCURRENCY, async meta => {
     try {
       const streams = await fetchStream(meta.id);
       const playable = streams.find(s => s.url) || streams[0];
       if (!playable?.url) return null;
+
       const epg = chooseEpg(meta.name, epgChannels);
+
       return {
         id: meta.id,
         name: meta.name,
@@ -154,6 +270,7 @@ async function buildChannels() {
         tvgId: epg?.id || '',
         epgName: epg?.name || '',
         matchScore: epg?.score || 0,
+        override: Boolean(epg?.override),
         title: playable.title || meta.name,
         url: playable.url,
         source: playable.name || STREAM_NAME,
@@ -163,15 +280,18 @@ async function buildChannels() {
       return null;
     }
   });
+
   const clean = channels.filter(Boolean);
-  cache.channels = { ts: Date.now(), data: clean };
+  cache.channels = { ts: Date.now(),  clean };
   return clean;
 }
 
 async function buildPlaylist() {
   if (cache.playlist.data && Date.now() - cache.playlist.ts < TTL_MS) return cache.playlist.data;
+
   const channels = await buildChannels();
-  const lines = ['#EXTM3U x-tvg-url="' + EPG_URL + '"'];
+  const lines = [`#EXTM3U x-tvg-url="${EPG_URL}"`];
+
   for (const ch of channels) {
     const attrs = [
       `tvg-id="${(ch.tvgId || '').replace(/"/g, '')}"`,
@@ -179,11 +299,13 @@ async function buildPlaylist() {
       `tvg-logo="${(ch.logo || '').replace(/"/g, '')}"`,
       `group-title="${(ch.group || 'TV').replace(/"/g, '')}"`
     ].join(' ');
+
     lines.push(`#EXTINF:-1 ${attrs},${ch.name}`);
     lines.push(ch.url);
   }
+
   const playlist = lines.join('\n');
-  cache.playlist = { ts: Date.now(), data: playlist };
+  cache.playlist = { ts: Date.now(),  playlist };
   return playlist;
 }
 
@@ -221,7 +343,31 @@ app.get('/epg.xml', async (_, res) => {
 });
 
 app.get('/', async (_, res) => {
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Flix TiviMate Bridge</title><style>body{font-family:Arial,sans-serif;margin:40px;background:#111;color:#eee}a{color:#7dd3fc}code{background:#222;padding:2px 6px;border-radius:4px}li{margin:8px 0}</style></head><body><h1>Flix TiviMate Bridge</h1><p>Endpoints disponibles:</p><ul><li><a href="/playlist.m3u">/playlist.m3u</a></li><li><a href="/epg.xml">/epg.xml</a></li><li><a href="/channels.json">/channels.json</a></li><li><a href="/health">/health</a></li></ul><p>Usa <code>/playlist.m3u</code> en TiviMate y el EPG externo con <code>/epg.xml</code> o el XMLTV original.</p></body></html>`;
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flix TiviMate Bridge</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:40px;background:#111;color:#eee}
+    a{color:#7dd3fc}
+    code{background:#222;padding:2px 6px;border-radius:4px}
+    li{margin:8px 0}
+  </style>
+</head>
+<body>
+  <h1>Flix TiviMate Bridge</h1>
+  <p>Endpoints disponibles:</p>
+  <ul>
+    <li><a href="/playlist.m3u">/playlist.m3u</a></li>
+    <li><a href="/epg.xml">/epg.xml</a></li>
+    <li><a href="/channels.json">/channels.json</a></li>
+    <li><a href="/health">/health</a></li>
+  </ul>
+  <p>Usa <code>/playlist.m3u</code> en TiviMate y el EPG externo con <code>/epg.xml</code> o el XMLTV original.</p>
+</body>
+</html>`;
   res.send(html);
 });
 
