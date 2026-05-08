@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: flix-tivimate-bridge
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: FLIX_BASE_URL
+        sync: false
+      - key: CATALOG_ID
+        value: vavoo-country-spain-live
+      - key: EPG_URL
+        value: https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiatv.xml
+      - key: CONCURRENCY
+        value: 8
+      - key: REQUEST_TIMEOUT
+        value: 15000
